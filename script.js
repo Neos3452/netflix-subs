@@ -3,8 +3,14 @@
 (function(){
 'use strict';
 
+var DEBUG = 1;
+
+function LOG(msg) { if (DEBUG) console.log(msg); }
+function WARN(msg) { console.warn(msg); }
+function ERR(msg) { console.error(msg); }
+
 findSettingsMenu().then(function(settingsMenu) {
-    console.log('settings found');
+    LOG('settings found');
     var originalTextSettings = settingsMenu.find('.player-timed-text-tracks');
     var substitutedTextSettings = originalTextSettings.clone();
 
