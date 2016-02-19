@@ -1,14 +1,34 @@
 //document.getElementById('player-menu-track-settings').addEventListener('onmouseenter', function() { console.log('clicked'); })
 //$('.player-control-bar').append('<div class="player-control-button player-fill-screen icon-player-full-screen" tabindex="0" role="button"></div>');
+(function(){
+'use strict';
 
 findSettingsMenu().then(function(settingsMenu) {
     console.log('settings found');
-    var textSettings = settingsMenu.find('.player-timed-text-tracks');
-    var testObj = //textSettings.clone();
-    $('<ol class="player-timed-text-tracks player-visible"><lh>My Subtitles</lh><li>Off</li><li>English [CC]</li><li>German</li><li>Polish</li><li class="player-track-selected">Test</li></ol>');
+    var originalTextSettings = settingsMenu.find('.player-timed-text-tracks');
+    var substitutedTextSettings = originalTextSettings.clone();
 
-    textSettings.hide();
-    settingsMenu.append(testObj);
+    var selectedClass = 'player-track-selected';
+    var selectedSubtitle = substitutedTextSettings.find('.' + selectedClass);
+    var customSubtitles = $('<li>Custom</li>');
+    substitutedTextSettings.append(customSubtitles);
+    substitutedTextSettings.on('click', 'li', function() {
+        var element = $(this);
+        var switchSubtitle = true;
+        if (this == customSubtitles[0]) {
+            switchSubtitle = window.confirm('Do you wanna add a subtitle?')
+        }
+
+        if (switchSubtitle) {
+            selectedSubtitle.removeClass(selectedClass);
+            element.addClass(selectedClass);
+            selectedSubtitle = element;
+            originalTextSettings.children().eq(element.index()).click();
+        }
+    });
+
+    originalTextSettings.hide();
+    settingsMenu.append(substitutedTextSettings);
 });
 
 function findSettingsMenu() {
@@ -28,7 +48,6 @@ function findSettingsMenu() {
     });
 }
 
-
 function observeNetflixVisibility(element, visible, invisible) {
     var isVisible = element.hasClass('player-visible');
     var settingsObserver = new MutationObserver(function(mutations) {
@@ -46,5 +65,7 @@ function observeNetflixVisibility(element, visible, invisible) {
             }
         });
     });
-    settingsObserver.observe(element[0], { attributes: true });
+    settingsObserver.observe(element[0], {attributes: true});
 }
+
+})();
