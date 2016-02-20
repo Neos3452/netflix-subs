@@ -22,6 +22,7 @@
 			<array>
 				<string>jquery-2.2.0.js</string>
 				<string>script.js</string>
+				<string>subtitles.parser.min.js</string>
 			</array>
 		</dict>
 	</dict>
