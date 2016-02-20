@@ -194,6 +194,7 @@ function htmlForTextWithEmbeddedNewlines(text) {
 
 function SubtitlesEmbedder(subtitles) {
     var subtitles = subtitles;
+    this.delay = 0;
     var video = null;
     var netflixSubtitleContainer = null;
     var subtitleContainer = $('<div id="custom-subtitles" style="white-space: nowrap; text-align: center; position: absolute;"></div>');
@@ -203,19 +204,6 @@ function SubtitlesEmbedder(subtitles) {
     var progressBarVisible = true;
     var progressBarObserver = null;
     var progressBar = null;
-    var removeObserver = new MutationObserver(function(mutations) {
-        mutations.forEach(function(mutation) {
-            for (var i = 0; i < mutation.removedNodes.length; ++i) {
-                var node = mutation.removedNodes[i];
-                if (node.id == subtitleContainer[0].id) {
-                    LOG('Just got removed');
-                    netflixSubtitleContainer.append(subtitleContainer);
-                }
-            }
-        });
-    });
-
-
 
     subtitleContainer.append(subtitleText);
     var subtitleResize = function() {
@@ -263,8 +251,8 @@ function SubtitlesEmbedder(subtitles) {
         }
     };
 
-    var videoTimeChanged = function() {
-        var time = video.currentTime * 1000; // get time in milliseconds
+    this.displaySubtitlesForCurrentTime = function() {
+        var time = (video.currentTime - this.delay) * 1000; // get time in milliseconds
 
         // TODO: ain't this a little too heavy?
         var subtitlesLength = subtitles.length;
@@ -292,10 +280,9 @@ function SubtitlesEmbedder(subtitles) {
         $(window).resize(subtitleResize);
         netflixSubtitleContainer.resize(subtitleResize);
         video = $('video')[0];
-        video.addEventListener('timeupdate', videoTimeChanged);
+        video.addEventListener('timeupdate', this.displaySubtitlesForCurrentTime.bind(this));
         netflixSubtitleContainer.append(subtitleContainer);
-        videoTimeChanged();
-        //removeObserver.observe(netflixSubtitleContainer[0], {childList: true});
+        this.displaySubtitlesForCurrentTime();
     };
 
     this.deactivate = function() {
@@ -303,6 +290,7 @@ function SubtitlesEmbedder(subtitles) {
         if (netflixSubtitleContainer) {
             subtitleContainer.remove();
             netflixSubtitleContainer = null;
+            netflixSubtitleContainer.off('resize', subtitleResize);
         }
         $(window).off('resize', subtitleResize);
         if (progressBarObserver) {
@@ -311,7 +299,7 @@ function SubtitlesEmbedder(subtitles) {
         }
         progressBar = null;
         if (video) {
-            video.removeEventListener('timeupdate', videoTimeChanged);
+            video.removeEventListener('timeupdate', this.displaySubtitlesForCurrentTime.bind(this));
             video = null;
         }
     };
