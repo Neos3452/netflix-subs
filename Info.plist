@@ -25,6 +25,10 @@
 				<string>subtitles.parser.min.js</string>
 			</array>
 		</dict>
+		<key>Stylesheets</key>
+		<array>
+			<string>style.css</string>
+		</array>
 	</dict>
 	<key>DeveloperIdentifier</key>
 	<string>0000000000</string>

@@ -15,6 +15,10 @@ findSettingsMenu().then(function(settingsMenu) {
     var substitutedTextSettings = originalTextSettings.clone();
 
     var customSubtitlesEmbedder = null;
+    var customSubtitlesSettings = $('<ol class="player-timed-text-tracks player-visible"><lh>Subtitle settings</lh></ol>');
+    var customSubtitlesDelayInput = $('<input value="0.0"/>');
+    customSubtitlesSettings.append($('<li>Delay: </li>').append(customSubtitlesDelayInput));
+
 
     var selectedClass = 'player-track-selected';
     var selectedSubtitle = substitutedTextSettings.find('.' + selectedClass);
@@ -28,13 +32,22 @@ findSettingsMenu().then(function(settingsMenu) {
             customSubtitlesEmbedder.deactivate();
             customSubtitlesEmbedder = null;
         }
+        customSubtitlesSettings.remove();
 
         if (this == customSubtitles[0]) {
             getUserSubtitle().then(function(subtitles) {
                 LOG('Subtitles loaded');
                 if (selectedSubtitle[0] == customSubtitles[0]) {
+                    customSubtitlesSettings.appendTo(settingsMenu);
                     customSubtitlesEmbedder = new SubtitlesEmbedder(subtitles);
                     customSubtitlesEmbedder.activate();
+                    customSubtitlesDelayInput.change(function() {
+                        var delay = customSubtitlesDelayInput.val();
+                        if ($.isNumeric(delay)) {
+                            customSubtitlesEmbedder.delay = delay;
+                            customSubtitlesEmbedder.displaySubtitlesForCurrentTime();
+                        }
+                    });
                 }
                 // else someone switched subtitles while we were loading
             });
@@ -269,6 +282,7 @@ function SubtitlesEmbedder(subtitles) {
             }
         }
     };
+    var subtitlesDisplayCallback = this.displaySubtitlesForCurrentTime;
 
     this.activate = function() {
         LOG('Activating custom subtitles');
@@ -280,17 +294,18 @@ function SubtitlesEmbedder(subtitles) {
         $(window).resize(subtitleResize);
         netflixSubtitleContainer.resize(subtitleResize);
         video = $('video')[0];
-        video.addEventListener('timeupdate', this.displaySubtitlesForCurrentTime.bind(this));
+        subtitlesDisplayCallback = this.displaySubtitlesForCurrentTime.bind(this);
+        video.addEventListener('timeupdate', subtitlesDisplayCallback);
         netflixSubtitleContainer.append(subtitleContainer);
-        this.displaySubtitlesForCurrentTime();
+        subtitlesDisplayCallback();
     };
 
     this.deactivate = function() {
         LOG('Deactivating custom subtitles');
         if (netflixSubtitleContainer) {
             subtitleContainer.remove();
-            netflixSubtitleContainer = null;
             netflixSubtitleContainer.off('resize', subtitleResize);
+            netflixSubtitleContainer = null;
         }
         $(window).off('resize', subtitleResize);
         if (progressBarObserver) {
@@ -299,7 +314,7 @@ function SubtitlesEmbedder(subtitles) {
         }
         progressBar = null;
         if (video) {
-            video.removeEventListener('timeupdate', this.displaySubtitlesForCurrentTime.bind(this));
+            video.removeEventListener('timeupdate', subtitlesDisplayCallback);
             video = null;
         }
     };

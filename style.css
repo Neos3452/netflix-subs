@@ -1,0 +1,9 @@
+.player-timed-text-tracks input {
+    width: 75%;
+    padding: 0;
+    margin: 0 !important;
+    margin-left: 1em !important;
+    border: 0;
+    color: #000 !important;
+    -webkit-text-fill-color: #000 !important;
+}
