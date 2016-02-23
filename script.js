@@ -126,7 +126,6 @@ findSettingsMenu().then(function(settingsMenu) {
                     customSubtitlesEmbedder.delay = delay;
                     customSubtitlesEmbedder.activate();
 
-                    LOG('remove class');
                     previouslySelected.removeClass(selectedClass);
                     element.addClass(selectedClass);
                 }
@@ -286,7 +285,7 @@ function htmlForTextWithEmbeddedNewlines(text) {
 }
 
 function SubtitlesEmbedder(subtitles) {
-    var subtitles = subtitles;
+    this.subtitles = subtitles;
     this.delay = 0;
     var video = null;
     var netflixSubtitleContainer = null;
@@ -348,18 +347,21 @@ function SubtitlesEmbedder(subtitles) {
         var time = (video.currentTime - this.delay) * 1000; // get time in milliseconds
 
         // TODO: ain't this a little too heavy?
-        var subtitlesLength = subtitles.length;
+        var subtitlesLength = this.subtitles.length;
         for (var i = 0; i < subtitlesLength; ++i) {
-            if (subtitles[i].startTime > time) {
+            if (this.subtitles[i].startTime > time) {
                 subtitleContainer.hide();
                 break;
             }
-            if (subtitles[i].endTime > time) {
-                subtitleText.html(htmlForTextWithEmbeddedNewlines(subtitles[i].text));
+            if (this.subtitles[i].endTime > time) {
+                subtitleText.html(htmlForTextWithEmbeddedNewlines(this.subtitles[i].text));
                 subtitleContainer.show();
                 subtitleResize();
                 break;
             }
+        }
+        if (i == subtitlesLength) {
+            subtitleContainer.hide();
         }
     };
     var subtitlesDisplayCallback = this.displaySubtitlesForCurrentTime;
