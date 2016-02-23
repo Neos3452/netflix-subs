@@ -1,9 +1,19 @@
-.player-timed-text-tracks input {
+.player-timed-text-tracks.custom-netflix-subtitles input {
     width: 75%;
     padding: 0;
     margin: 0 !important;
-    margin-left: 1em !important;
+    margin-left: 0.75em !important;
     border: 0;
     color: #000 !important;
     -webkit-text-fill-color: #000 !important;
+}
+
+.player-timed-text-tracks.custom-netflix-subtitles i:not(:first-child) {
+    margin-left: 1.5ch !important;
+}
+
+.player-timed-text-tracks.custom-netflix-subtitles .netflix-subtitles-delay-label {
+    float: left;
+    clear: left;
+    width: 14ch;
 }

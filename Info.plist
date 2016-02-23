@@ -22,12 +22,13 @@
 			<array>
 				<string>jquery-2.2.0.js</string>
 				<string>script.js</string>
-				<string>subtitles.parser.min.js</string>
+				<string>subtitles.parser.js</string>
 			</array>
 		</dict>
 		<key>Stylesheets</key>
 		<array>
 			<string>style.css</string>
+			<string>css/font-awesome.css</string>
 		</array>
 	</dict>
 	<key>DeveloperIdentifier</key>

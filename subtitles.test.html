@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<head>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+<script type="text/javascript" src="subtitles.parser.js"></script>
+</head>
+<body>
+<input type="file" id="fileinput" />
+<script type="text/javascript">
+  function readSingleFile(evt) {
+    //Retrieve the first (and only!) File from the FileList object
+    var f = evt.target.files[0]; 
+
+    if (f) {
+      var r = new FileReader();
+      r.onload = function(e) { 
+        var contents = e.target.result;
+        var subtitles = parser.fromSrt(contents, true);
+        for (var i = 0; i < subtitles.length; ++i) {
+            console.log(subtitles[i]);
+        }
+      };
+      r.readAsText(f);
+    } else { 
+      alert("Failed to load file");
+    }
+  }
+
+  document.getElementById('fileinput').addEventListener('change', readSingleFile, false);
+</script>
+</body>
+

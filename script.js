@@ -1,3 +1,51 @@
+(function() {
+    /**
+     * Decimal adjustment of a number.
+     *
+     * @param {String}  type  The type of adjustment.
+     * @param {Number}  value The number.
+     * @param {Integer} exp   The exponent (the 10 logarithm of the adjustment base).
+     * @returns {Number} The adjusted value.
+     */
+    function decimalAdjust(type, value, exp) {
+        // If the exp is undefined or zero...
+        if (typeof exp === 'undefined' || +exp === 0) {
+            return Math[type](value);
+        }
+        value = +value;
+        exp = +exp;
+        // If the value is not a number or the exp is not an integer...
+        if (isNaN(value) || !(typeof exp === 'number' && exp % 1 === 0)) {
+            return NaN;
+        }
+        // Shift
+        value = value.toString().split('e');
+        value = Math[type](+(value[0] + 'e' + (value[1] ? (+value[1] - exp) : -exp)));
+        // Shift back
+        value = value.toString().split('e');
+        return +(value[0] + 'e' + (value[1] ? (+value[1] + exp) : exp));
+    }
+
+    // Decimal round
+    if (!Math.round10) {
+        Math.round10 = function(value, exp) {
+            return decimalAdjust('round', value, exp);
+        };
+    }
+    // Decimal floor
+    if (!Math.floor10) {
+        Math.floor10 = function(value, exp) {
+            return decimalAdjust('floor', value, exp);
+        };
+    }
+    // Decimal ceil
+    if (!Math.ceil10) {
+        Math.ceil10 = function(value, exp) {
+            return decimalAdjust('ceil', value, exp);
+        };
+    }
+})();
+
 //document.getElementById('player-menu-track-settings').addEventListener('onmouseenter', function() { console.log('clicked'); })
 //$('.player-control-bar').append('<div class="player-control-button player-fill-screen icon-player-full-screen" tabindex="0" role="button"></div>');
 (function(){
@@ -15,9 +63,40 @@ findSettingsMenu().then(function(settingsMenu) {
     var substitutedTextSettings = originalTextSettings.clone();
 
     var customSubtitlesEmbedder = null;
-    var customSubtitlesSettings = $('<ol class="player-timed-text-tracks player-visible"><lh>Subtitle settings</lh></ol>');
-    var customSubtitlesDelayInput = $('<input value="0.0"/>');
-    customSubtitlesSettings.append($('<li>Delay: </li>').append(customSubtitlesDelayInput));
+    var customSubtitlesSettings = $('<ol class="player-timed-text-tracks player-visible custom-netflix-subtitles"><lh>Subtitles settings</lh></ol>');
+    var customSubtitlesDelayLabel = $('<div class="netflix-subtitles-delay-label"></div>');
+    var customSubtitlesDelayIncrease = $('<i class="fa fa-plus-circle"></i>');
+    var customSubtitlesDelayDecrease = $('<i class="fa fa-minus-circle"></i>');
+
+    var delay;
+    var delayStep = 0.25;
+    var setDelay = function(newDelay) {
+        if ($.isNumeric(newDelay)) {
+            delay = Math.round10(newDelay, -2);
+            customSubtitlesDelayLabel.text('Delay: ' + delay + ' s');
+            if (customSubtitlesEmbedder) {
+                customSubtitlesEmbedder.delay = delay;
+                customSubtitlesEmbedder.displaySubtitlesForCurrentTime();
+            }
+        }
+    };
+    setDelay(0);
+
+    customSubtitlesDelayIncrease.click(function() {
+        setDelay(delay + delayStep);
+        return false;
+    });
+    customSubtitlesDelayDecrease.click(function() {
+        setDelay(delay - delayStep);
+        return false;
+    });
+
+    customSubtitlesSettings.append(
+        $('<li></li>')
+            .append(customSubtitlesDelayLabel)
+            .append($('<div class="settings-right"></div>')
+                .append(customSubtitlesDelayIncrease)
+                .append(customSubtitlesDelayDecrease)));
 
 
     var selectedClass = 'player-track-selected';
@@ -32,32 +111,33 @@ findSettingsMenu().then(function(settingsMenu) {
             customSubtitlesEmbedder.deactivate();
             customSubtitlesEmbedder = null;
         }
-        customSubtitlesSettings.remove();
+        customSubtitlesSettings.detach();
+        setDelay(0);
 
         if (this == customSubtitles[0]) {
+            var previouslySelected = selectedSubtitle;
             getUserSubtitle().then(function(subtitles) {
                 LOG('Subtitles loaded');
                 if (selectedSubtitle[0] == customSubtitles[0]) {
+                    hideNetflixSubtitles();
+
                     customSubtitlesSettings.appendTo(settingsMenu);
                     customSubtitlesEmbedder = new SubtitlesEmbedder(subtitles);
+                    customSubtitlesEmbedder.delay = delay;
                     customSubtitlesEmbedder.activate();
-                    customSubtitlesDelayInput.change(function() {
-                        var delay = customSubtitlesDelayInput.val();
-                        if ($.isNumeric(delay)) {
-                            customSubtitlesEmbedder.delay = delay;
-                            customSubtitlesEmbedder.displaySubtitlesForCurrentTime();
-                        }
-                    });
+
+                    LOG('remove class');
+                    previouslySelected.removeClass(selectedClass);
+                    element.addClass(selectedClass);
                 }
                 // else someone switched subtitles while we were loading
             });
-            hideNetflixSubtitles();
         } else {
             restoreNetflixSubtitles();
-        }
 
-        selectedSubtitle.removeClass(selectedClass);
-        element.addClass(selectedClass);
+            selectedSubtitle.removeClass(selectedClass);
+            element.addClass(selectedClass);
+        }
         selectedSubtitle = element;
         originalTextSettings.children().eq(element.index()).click();
     });
