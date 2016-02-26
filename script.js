@@ -164,6 +164,7 @@ function findSettingsMenu() {
 
 // This functions is used to hide subtitles so user preference is saved instead of overridden to NONE
 function hideNetflixSubtitles() {
+    $('.player-timedtext-text-container').hide();
     if (!document.netflixSubtitleObserver) {
         document.netflixSubtitleObserver = new MutationObserver(function (mutations) {
             mutations.forEach(function (mutation) {
