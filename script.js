@@ -48,7 +48,7 @@
 
 //document.getElementById('player-menu-track-settings').addEventListener('onmouseenter', function() { console.log('clicked'); })
 //$('.player-control-bar').append('<div class="player-control-button player-fill-screen icon-player-full-screen" tabindex="0" role="button"></div>');
-(function(){
+$(window).load(function() {
 'use strict';
 
 var DEBUG = 1;
@@ -57,110 +57,49 @@ function LOG(msg) { if (DEBUG) console.log(msg); }
 function WARN(msg) { if (DEBUG) console.warn(msg); }
 function ERR(msg) { console.error(msg); }
 
-findSettingsMenu().then(function(settingsMenu) {
-    LOG('settings found');
-    var originalTextSettings = settingsMenu.find('.player-timed-text-tracks');
-    var substitutedTextSettings = originalTextSettings.clone();
+var customSubtitles = null;
 
-    var customSubtitlesEmbedder = null;
-    var customSubtitlesSettings = $('<ol class="player-timed-text-tracks player-visible custom-netflix-subtitles">' +
-        '<lh>Subtitles settings</lh></ol>');
-    var customSubtitlesDelayLabel = $('<div class="netflix-subtitles-delay-label"></div>');
-    var customSubtitlesDelayIncrease = $('<i class="fa fa-plus-circle"></i>');
-    var customSubtitlesDelayDecrease = $('<i class="fa fa-minus-circle"></i>');
-
-    var delay;
-    var delayStep = 0.25;
-    var setDelay = function(newDelay) {
-        if ($.isNumeric(newDelay)) {
-            delay = Math.round10(newDelay, -2);
-            customSubtitlesDelayLabel.text('Delay: ' + delay + ' s');
-            if (customSubtitlesEmbedder) {
-                customSubtitlesEmbedder.delay = delay;
-                customSubtitlesEmbedder.displaySubtitlesForCurrentTime();
-            }
-        }
-    };
-    setDelay(0);
-
-    customSubtitlesDelayIncrease.click(function() {
-        setDelay(delay + delayStep);
-        return false;
-    });
-    customSubtitlesDelayDecrease.click(function() {
-        setDelay(delay - delayStep);
-        return false;
-    });
-
-    customSubtitlesSettings.append(
-        $('<li></li>')
-            .append(customSubtitlesDelayLabel)
-            .append($('<div class="settings-right"></div>')
-                .append(customSubtitlesDelayIncrease)
-                .append(customSubtitlesDelayDecrease)));
-
-
-    var selectedClass = 'player-track-selected';
-    var selectedSubtitle = substitutedTextSettings.find('.' + selectedClass);
-    var customSubtitles = $('<li>Custom</li>');
-    substitutedTextSettings.append(customSubtitles);
-
-    substitutedTextSettings.on('click', 'li', function() {
-        var element = $(this);
-
-        if (customSubtitlesEmbedder) {
-            customSubtitlesEmbedder.deactivate();
-            customSubtitlesEmbedder = null;
-        }
-        customSubtitlesSettings.detach();
-        setDelay(0);
-
-        if (this == customSubtitles[0]) {
-            var previouslySelected = selectedSubtitle;
-            getUserSubtitle().then(function(subtitles) {
-                LOG('Subtitles loaded');
-                if (selectedSubtitle[0] == customSubtitles[0]) {
-                    hideNetflixSubtitles();
-
-                    customSubtitlesSettings.appendTo(settingsMenu);
-                    customSubtitlesEmbedder = new SubtitlesEmbedder(subtitles);
-                    customSubtitlesEmbedder.delay = delay;
-                    customSubtitlesEmbedder.activate();
-
-                    previouslySelected.removeClass(selectedClass);
-                    element.addClass(selectedClass);
-                }
-                // else someone switched subtitles while we were loading
-            });
-        } else {
-            restoreNetflixSubtitles();
-
-            selectedSubtitle.removeClass(selectedClass);
-            element.addClass(selectedClass);
-        }
-        selectedSubtitle = element;
-        originalTextSettings.children().eq(element.index()).click();
-    });
-
-    originalTextSettings.hide();
-    settingsMenu.append(substitutedTextSettings);
+watchSettingsMenu(function(settingsMenu) {
+    if (customSubtitles === null) {
+        customSubtitles = new CustomSubtitlesInjector();
+    }
+    customSubtitles.injectIntoSettings(settingsMenu);
+}, function() {
+    customSubtitles.uninject();
 });
 
-function findSettingsMenu() {
-    return new Promise(function(resolve, reject) {
-        var settingsFinder = new MutationObserver(function (mutations) {
-            mutations.forEach(function (mutation) {
-                for (var i = 0; i < mutation.addedNodes.length; ++i) {
-                    var node = mutation.addedNodes[i];
-                    if (node.id == 'player-menu-track-settings') {
-                        settingsFinder.disconnect();
-                        resolve($(node));
-                    }
+function watchSettingsMenu(addedCb, removedCb) {
+    if (!$('#playerContainer').length) {
+        WARN('No player container, won\'t look for settings');
+        return;
+    }
+
+    var settingsMenuId = 'player-menu-track-settings';
+
+    var settingsFinder = new MutationObserver(function (mutations) {
+        mutations.forEach(function (mutation) {
+            var node = null;
+            var i = 0;
+            for (i = 0; i < mutation.addedNodes.length; ++i) {
+                node = mutation.addedNodes[i];
+                if (node.id === settingsMenuId) {
+                    LOG('Menu settings has been added');
+                    addedCb($(node));
+                    return;
                 }
-            });
+            }
+
+            for (i = 0; i < mutation.removedNodes.length; ++i) {
+                node = mutation.removedNodes[i];
+                if (node.id === settingsMenuId) {
+                    LOG('Menu settings has been removed');
+                    removedCb($(node));
+                    return;
+                }
+            }
         });
-        settingsFinder.observe(document, {childList: true, subtree: true});
     });
+    settingsFinder.observe(document, {childList: true, subtree: true});
 }
 
 // This functions is used to hide subtitles so user preference is saved instead of overridden to NONE
@@ -217,7 +156,6 @@ function findSubtitleContainer() {
 function getUserSubtitle() {
     return new Promise(function(resolve, reject) {
         var input = $('<input type="file"/>');
-        input.click();
         input.change(function () {
             var files = input[0].files;
             if (files.length < 1) {
@@ -240,6 +178,7 @@ function getUserSubtitle() {
                 reader.readAsText(files[0]);
             }
         });
+        input.click();
     });
 }
 
@@ -284,6 +223,147 @@ function htmlForTextWithEmbeddedNewlines(text) {
         htmls.push(tmpDiv.text(lines[i]).html());
     }
     return htmls.join("<br/>");
+}
+
+function CustomSubtitlesInjector() {
+    // Custom subtitles settings menu
+    var customSubtitlesEmbedder = null;
+    var wasEmbedderActive = false;
+    var subtitles = null;
+    var customSubtitlesSettings = $('<ol class="player-timed-text-tracks player-visible custom-netflix-subtitles">' +
+        '<lh>Subtitles settings</lh></ol>');
+    var customSubtitlesDelayLabel = $('<div class="netflix-subtitles-delay-label"></div>');
+    var customSubtitlesDelayIncrease = $('<i class="fa fa-plus-circle"></i>');
+    var customSubtitlesDelayDecrease = $('<i class="fa fa-minus-circle"></i>');
+
+    var delay;
+    var delayStep = 0.25;
+    var setDelay = function (newDelay) {
+        if ($.isNumeric(newDelay)) {
+            delay = Math.round10(newDelay, -2);
+            customSubtitlesDelayLabel.text('Delay: ' + delay + ' s');
+            if (customSubtitlesEmbedder) {
+                customSubtitlesEmbedder.delay = delay;
+                customSubtitlesEmbedder.displaySubtitlesForCurrentTime();
+            }
+        }
+    };
+    setDelay(0);
+
+    customSubtitlesDelayIncrease.click(function () {
+        setDelay(delay + delayStep);
+        return false;
+    });
+    customSubtitlesDelayDecrease.click(function () {
+        setDelay(delay - delayStep);
+        return false;
+    });
+
+    customSubtitlesSettings.append(
+        $('<li></li>')
+            .append(customSubtitlesDelayLabel)
+            .append($('<div class="settings-right"></div>')
+                .append(customSubtitlesDelayIncrease)
+                .append(customSubtitlesDelayDecrease)));
+
+    var selectedClass = 'player-track-selected';
+    var customSubtitles = $('<li>Custom</li>');
+    var settingsMenu = null;
+    var originalTextSettings = null;
+    var substitutedTextSettings = null;
+    var selectedSubtitle = null;
+
+    var settingsMenuClickHandler = function () {
+        var element = $(this);
+
+        if (customSubtitlesEmbedder) {
+            customSubtitlesEmbedder.deactivate();
+            customSubtitlesEmbedder = null;
+            subtitles = null;
+        }
+        customSubtitlesSettings.detach();
+        setDelay(0);
+
+        if (this == customSubtitles[0]) {
+            var previouslySelected = selectedSubtitle;
+            getUserSubtitle().then(function (newSubs) {
+                LOG('Subtitles loaded');
+                if (selectedSubtitle[0] === customSubtitles[0]) {
+                    subtitles = newSubs;
+
+                    hideNetflixSubtitles();
+
+                    customSubtitlesSettings.appendTo(settingsMenu);
+                    customSubtitlesEmbedder = new SubtitlesEmbedder(subtitles);
+                    customSubtitlesEmbedder.delay = delay;
+                    customSubtitlesEmbedder.activate();
+
+                    previouslySelected.removeClass(selectedClass);
+                    element.addClass(selectedClass);
+                }
+                // else someone switched subtitles while we were loading
+            });
+        } else {
+            restoreNetflixSubtitles();
+
+            selectedSubtitle.removeClass(selectedClass);
+            element.addClass(selectedClass);
+        }
+        selectedSubtitle = element;
+        originalTextSettings.children().eq(element.index()).click();
+    };
+
+    this.injectIntoSettings = function(settingsNode) {
+
+        if (settingsMenu !== null) {
+            this.uninject();
+        }
+
+        // rewire subtitle settings
+        settingsMenu = settingsNode;
+        originalTextSettings = settingsMenu.find('.player-timed-text-tracks');
+        substitutedTextSettings = originalTextSettings.clone();
+        selectedSubtitle = substitutedTextSettings.find('.' + selectedClass);
+        substitutedTextSettings.append(customSubtitles);
+
+        substitutedTextSettings.on('click', 'li', settingsMenuClickHandler);
+
+        originalTextSettings.hide();
+        settingsMenu.append(substitutedTextSettings);
+
+        if (wasEmbedderActive && subtitles !== null) {
+            LOG('Restoring subtitles');
+            selectedSubtitle.removeClass(selectedClass);
+            customSubtitles.addClass(selectedClass);
+            selectedSubtitle = customSubtitles;
+            hideNetflixSubtitles();
+
+            customSubtitlesSettings.appendTo(settingsMenu);
+            customSubtitlesEmbedder = new SubtitlesEmbedder(subtitles);
+            customSubtitlesEmbedder.delay = delay;
+            customSubtitlesEmbedder.activate();
+
+        }
+    };
+
+    this.uninject = function() {
+
+        if (customSubtitlesEmbedder) {
+            wasEmbedderActive = true;
+            customSubtitlesEmbedder.deactivate();
+            customSubtitlesEmbedder = null;
+            restoreNetflixSubtitles();
+        }
+
+        substitutedTextSettings.remove();
+
+        originalTextSettings.show();
+
+        originalTextSettings = null;
+        substitutedTextSettings = null;
+        selectedSubtitle = null;
+        settingsMenu = null;
+    };
 }
 
 function SubtitlesEmbedder(subtitles) {
@@ -404,4 +484,4 @@ function SubtitlesEmbedder(subtitles) {
     };
 }
 
-})();
+});
