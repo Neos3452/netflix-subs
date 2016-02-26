@@ -63,7 +63,8 @@ findSettingsMenu().then(function(settingsMenu) {
     var substitutedTextSettings = originalTextSettings.clone();
 
     var customSubtitlesEmbedder = null;
-    var customSubtitlesSettings = $('<ol class="player-timed-text-tracks player-visible custom-netflix-subtitles"><lh>Subtitles settings</lh></ol>');
+    var customSubtitlesSettings = $('<ol class="player-timed-text-tracks player-visible custom-netflix-subtitles">' +
+        '<lh>Subtitles settings</lh></ol>');
     var customSubtitlesDelayLabel = $('<div class="netflix-subtitles-delay-label"></div>');
     var customSubtitlesDelayIncrease = $('<i class="fa fa-plus-circle"></i>');
     var customSubtitlesDelayDecrease = $('<i class="fa fa-minus-circle"></i>');
