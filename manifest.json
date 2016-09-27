@@ -7,7 +7,8 @@
     "content_scripts": [{
         "matches": ["*://*.netflix.com/*"],
         "js": ["jquery-2.2.0.js", "script.js", "subtitles.parser.js"],
-        "css": ["style.css", "css/font-awesome.css"]
+        "css": ["style.css", "css/font-awesome.chrome.css"],
+        "web_accessible_resources": ["fonts/*.*" ]
     }],
 
     "permissions": ["tabs"]
